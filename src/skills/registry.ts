@@ -31,6 +31,14 @@ export async function installSkillFromGit(
   const resolvedDir = resolveHome(skillsDir);
   const targetDir = path.join(resolvedDir, name);
 
+  // Validate repoUrl against expected GitHub URL pattern
+  const GIT_URL_RE = /^https:\/\/github\.com\/[^\/]+\/[^\/]+(\.git)?$/;
+  if (!GIT_URL_RE.test(repoUrl)) {
+    throw new Error(
+      `Invalid repo URL: must be a GitHub HTTPS URL (https://github.com/owner/repo)`,
+    );
+  }
+
   // Clone via sandbox exec
   const result = await conway.exec(
     `git clone --depth 1 ${repoUrl} ${targetDir}`,
