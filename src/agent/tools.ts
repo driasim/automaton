@@ -5,6 +5,8 @@
  * Tools are organized by category and exposed to the inference model.
  */
 
+import { URL } from "url";
+import net from "net";
 import type {
   AutomatonTool,
   ToolContext,
@@ -62,6 +64,69 @@ function isForbiddenCommand(command: string, sandboxId: string): string | null {
   }
 
   return null;
+}
+
+// ─── URL Validation ─────────────────────────────────────────────
+
+/**
+ * Validate that a URL is safe to fetch (public https only).
+ */
+function validateUrl(url: string): string | null {
+  let parsed: URL;
+  try {
+    parsed = new URL(url);
+  } catch {
+    return null;
+  }
+
+  // Only allow https
+  if (parsed.protocol !== "https:") {
+    return null;
+  }
+
+  const host = parsed.hostname;
+
+  // Block private/reserved IP ranges
+  if (net.isIP(host) && isPrivateIP(host)) {
+    return null;
+  }
+
+  // Block known local hostnames
+  if (
+    host === "localhost" ||
+    host === "127.0.0.1" ||
+    host === "::1" ||
+    host === "0.0.0.0" ||
+    host.endsWith(".local") ||
+    host.endsWith(".localhost")
+  ) {
+    return null;
+  }
+
+  return url;
+}
+
+/**
+ * Check if an IP address is in a private/reserved range.
+ */
+function isPrivateIP(ip: string): boolean {
+  if (net.isIPv4(ip)) {
+    const parts = ip.split(".").map(Number);
+    if (parts[0] === 127) return true; // loopback
+    if (parts[0] === 10) return true; // private 10.0.0.0/8
+    if (parts[0] === 172 && parts[1] >= 16 && parts[1] <= 31) return true; // 172.16.0.0/12
+    if (parts[0] === 192 && parts[1] === 168) return true; // 192.168.0.0/16
+    if (parts[0] === 169 && parts[1] === 254) return true; // link-local
+    if (parts[0] === 0) return true; // current network
+    if (parts[0] === 100 && parts[1] >= 64 && parts[1] <= 127) return true; // CGNAT
+    if (parts[0] === 198 && parts[1] >= 18 && parts[1] <= 19) return true; // benchmark
+    return false;
+  }
+  const lower = ip.toLowerCase();
+  if (lower === "::1") return true;
+  if (lower.startsWith("fc") || lower.startsWith("fd")) return true; // unique local
+  if (lower.startsWith("fe80")) return true; // link-local
+  return false;
 }
 
 // ─── Built-in Tools ────────────────────────────────────────────
@@ -1471,6 +1536,12 @@ Model: ${ctx.inference.getDefaultModel()}
       execute: async (args, ctx) => {
         const { x402Fetch } = await import("../conway/x402.js");
         const url = args.url as string;
+
+        // Validate URL — must be public https, not a private/internal IP
+        if (!validateUrl(url)) {
+          return `x402 fetch blocked: URL must be https and target a public host (private/internal IPs not allowed)`;
+        }
+
         const method = (args.method as string) || "GET";
         const body = args.body as string | undefined;
         const extraHeaders = args.headers
