@@ -9,6 +9,8 @@
 
 import fs from "fs";
 import path from "path";
+import { URL } from "url";
+import net from "net";
 import type {
   Skill,
   SkillSource,
@@ -16,6 +18,82 @@ import type {
   ConwayClient,
 } from "../types.js";
 import { parseSkillMd } from "./format.js";
+
+/**
+ * Validate that a URL is safe to fetch:
+ * - Must be https://
+ * - Must point to a public host (not localhost, not a private IP)
+ * Returns the parsed URL on success, or null on failure.
+ */
+function validateFetchUrl(url: string): URL | null {
+  let parsed: URL;
+  try {
+    parsed = new URL(url);
+  } catch {
+    return null;
+  }
+
+  // Only allow https
+  if (parsed.protocol !== "https:") {
+    return null;
+  }
+
+  // Block private/reserved IP ranges
+  const host = parsed.hostname;
+  if (net.isIP(host)) {
+    if (isPrivateIP(host)) {
+      return null;
+    }
+  } else {
+    // Hostname — reject if it resolves to a private IP
+    // We check well-known local hostnames directly
+    if (
+      host === "localhost" ||
+      host === "127.0.0.1" ||
+      host === "::1" ||
+      host === "0.0.0.0" ||
+      host.endsWith(".local") ||
+      host.endsWith(".localhost")
+    ) {
+      return null;
+    }
+  }
+
+  return parsed;
+}
+
+/**
+ * Check if an IP address is in a private/reserved range.
+ */
+function isPrivateIP(ip: string): boolean {
+  if (net.isIPv4(ip)) {
+    const parts = ip.split(".").map(Number);
+    // 127.0.0.0/8 (loopback)
+    if (parts[0] === 127) return true;
+    // 10.0.0.0/8 (private)
+    if (parts[0] === 10) return true;
+    // 172.16.0.0/12 (private)
+    if (parts[0] === 172 && parts[1] >= 16 && parts[1] <= 31) return true;
+    // 192.168.0.0/16 (private)
+    if (parts[0] === 192 && parts[1] === 168) return true;
+    // 169.254.0.0/16 (link-local)
+    if (parts[0] === 169 && parts[1] === 254) return true;
+    // 0.0.0.0/8
+    if (parts[0] === 0) return true;
+    // 100.64.0.0/10 (CGNAT)
+    if (parts[0] === 100 && parts[1] >= 64 && parts[1] <= 127) return true;
+    // 198.18.0.0/15 (benchmarking)
+    if (parts[0] === 198 && parts[1] >= 18 && parts[1] <= 19) return true;
+    return false;
+  } else {
+    // IPv6 — basic private ranges
+    const lower = ip.toLowerCase();
+    if (lower === "::1") return true;
+    if (lower.startsWith("fc") || lower.startsWith("fd")) return true; // Unique local
+    if (lower.startsWith("fe80")) return true; // Link-local
+    return false;
+  }
+}
 
 /**
  * Install a skill from a git repository.
@@ -71,12 +149,20 @@ export async function installSkillFromUrl(
   const resolvedDir = resolveHome(skillsDir);
   const targetDir = path.join(resolvedDir, name);
 
-  // Create directory
-  await conway.exec(`mkdir -p ${targetDir}`, 5000);
+  // Validate URL — must be https, not a private/internal IP
+  const parsedUrl = validateFetchUrl(url);
+  if (!parsedUrl) {
+    throw new Error(
+      `Invalid URL: must be an https:// URL pointing to a public host`,
+    );
+  }
 
-  // Fetch SKILL.md
+  // Create directory (quote targetDir)
+  await conway.exec(`mkdir -p "${targetDir}"`, 5000);
+
+  // Fetch SKILL.md (quote both url and targetDir)
   const result = await conway.exec(
-    `curl -fsSL "${url}" -o ${targetDir}/SKILL.md`,
+    `curl -fsSL "${url}" -o "${targetDir}/SKILL.md"`,
     30000,
   );
 
@@ -85,7 +171,7 @@ export async function installSkillFromUrl(
   }
 
   const content = await conway.exec(
-    `cat ${targetDir}/SKILL.md`,
+    `cat "${targetDir}/SKILL.md"`,
     5000,
   );
 
