@@ -682,6 +682,15 @@ Model: ${ctx.inference.getDefaultModel()}
       },
       execute: async (args, ctx) => {
         const pkg = args.package as string;
+
+        // Validate npm package name to prevent shell injection
+        // npm packages: @scope/name or name, lowercase, alphanumeric + - . _
+        const NPM_PACKAGE_RE =
+          /^(?:@[a-z0-9][a-z0-9-]*\/)?[a-z0-9][a-z0-9._-]*(?:\/[a-z0-9][a-z0-9._-]*)?$/;
+        if (!NPM_PACKAGE_RE.test(pkg)) {
+          return `Invalid npm package name: "${pkg}". Package names must be lowercase alphanumeric with optional @scope/.`;
+        }
+
         const result = await ctx.conway.exec(`npm install -g ${pkg}`, 60000);
 
         if (result.exitCode !== 0) {
