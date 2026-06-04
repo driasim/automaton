@@ -96,7 +96,9 @@ Environment:
     return;
   }
 
-  // Default: show help
+  const simOutput = args.includes("--output") ? args[args.indexOf("--output") + 1] : args.includes("-o") ? args[args.indexOf("-o") + 1] : undefined;
+
+    // Default: show help
   console.log('Run "automaton --help" for usage information.');
   console.log('Run "automaton --run" to start the automaton.');
 }
