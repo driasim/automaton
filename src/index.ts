@@ -96,9 +96,23 @@ Environment:
     return;
   }
 
+  // Simulation width
+  const simWidth = args.includes("--width") ? parseInt(args[args.indexOf("--width") + 1], 10) : args.includes("-w") ? parseInt(args[args.indexOf("-w") + 1], 10) : undefined;
+
   // Default: show help
   console.log('Run "automaton --help" for usage information.');
   console.log('Run "automaton --run" to start the automaton.');
+}
+
+/** Get value for a CLI flag from argv. */
+function _getArgValue(flag: string, short?: string): string | undefined {
+  const idx = process.argv.indexOf(flag);
+  if (idx !== -1 && idx + 1 < process.argv.length) return process.argv[idx + 1];
+  if (short) {
+    const sidx = process.argv.indexOf(short);
+    if (sidx !== -1 && sidx + 1 < process.argv.length) return process.argv[sidx + 1];
+  }
+  return undefined;
 }
 
 // ─── Status Command ────────────────────────────────────────────
