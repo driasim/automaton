@@ -96,7 +96,9 @@ Environment:
     return;
   }
 
-  // Default: show help
+  const simHeight = args.includes("--height") ? parseInt(args[args.indexOf("--height") + 1], 10) : args.includes("-h") ? parseInt(args[args.indexOf("-h") + 1], 10) : undefined;
+
+    // Default: show help
   console.log('Run "automaton --help" for usage information.');
   console.log('Run "automaton --run" to start the automaton.');
 }
