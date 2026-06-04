@@ -96,7 +96,9 @@ Environment:
     return;
   }
 
-  // Default: show help
+  const simColors = args.includes("--colors") ? args[args.indexOf("--colors") + 1] : undefined;
+
+    // Default: show help
   console.log('Run "automaton --help" for usage information.');
   console.log('Run "automaton --run" to start the automaton.');
 }
