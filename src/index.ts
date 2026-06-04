@@ -96,7 +96,9 @@ Environment:
     return;
   }
 
-  // Default: show help
+  const simSeed = args.includes("--seed") ? parseInt(args[args.indexOf("--seed") + 1], 10) : undefined;
+
+    // Default: show help
   console.log('Run "automaton --help" for usage information.');
   console.log('Run "automaton --run" to start the automaton.');
 }
