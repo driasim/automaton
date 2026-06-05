@@ -139,14 +139,14 @@ export function isProtectedFile(filePath: string): boolean {
 
   // Check against protected file patterns
   for (const pattern of PROTECTED_FILES) {
-    if (resolved.includes(pattern) || filePath.includes(pattern)) {
+    if (resolved.toLowerCase().includes(pattern.toLowerCase()) || filePath.toLowerCase().includes(pattern.toLowerCase())) {
       return true;
     }
   }
 
   // Check against blocked directory patterns
   for (const pattern of BLOCKED_DIRECTORY_PATTERNS) {
-    if (resolved.includes(pattern) || filePath.includes(pattern)) {
+    if (resolved.toLowerCase().includes(pattern.toLowerCase()) || filePath.toLowerCase().includes(pattern.toLowerCase())) {
       return true;
     }
   }
