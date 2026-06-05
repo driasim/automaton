@@ -218,6 +218,7 @@ export async function runAgentLoop(
           try {
             args = JSON.parse(tc.function.arguments);
           } catch {
+            console.warn(`[WARN] Failed to parse tool call arguments: ${tc.function.arguments}`);
             args = {};
           }
 
