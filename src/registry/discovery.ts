@@ -5,8 +5,6 @@
  * Fetch and parse agent cards from URIs.
  */
 
-import { URL } from "url";
-import net from "net";
 import type {
   DiscoveredAgent,
   AgentCard,
@@ -49,85 +47,16 @@ export async function discoverAgents(
 }
 
 /**
- * Validate that a URI is safe to fetch.
- * Only https:// and ipfs:// (converted to https://ipfs.io/) are allowed.
- * Private/reserved IPs are blocked.
- */
-function validateAgentCardUri(uri: string): string | null {
-  // Handle IPFS URIs — convert to https gateway
-  if (uri.startsWith("ipfs://")) {
-    return `https://ipfs.io/ipfs/${uri.slice(7)}`;
-  }
-
-  // Must be https at this point
-  if (!uri.startsWith("https://")) {
-    return null;
-  }
-
-  // Validate the URL structure and block private IPs
-  try {
-    const parsed = new URL(uri);
-    if (parsed.protocol !== "https:") return null;
-
-    const host = parsed.hostname;
-
-    // Block private/reserved IPs
-    if (net.isIP(host) && isPrivateIP(host)) {
-      return null;
-    }
-
-    // Block known local hostnames
-    if (
-      host === "localhost" ||
-      host === "127.0.0.1" ||
-      host === "::1" ||
-      host === "0.0.0.0" ||
-      host.endsWith(".local") ||
-      host.endsWith(".localhost")
-    ) {
-      return null;
-    }
-
-    return uri;
-  } catch {
-    return null;
-  }
-}
-
-/**
- * Check if an IP address is in a private/reserved range.
- */
-function isPrivateIP(ip: string): boolean {
-  if (net.isIPv4(ip)) {
-    const parts = ip.split(".").map(Number);
-    if (parts[0] === 127) return true;
-    if (parts[0] === 10) return true;
-    if (parts[0] === 172 && parts[1] >= 16 && parts[1] <= 31) return true;
-    if (parts[0] === 192 && parts[1] === 168) return true;
-    if (parts[0] === 169 && parts[1] === 254) return true;
-    if (parts[0] === 0) return true;
-    if (parts[0] === 100 && parts[1] >= 64 && parts[1] <= 127) return true;
-    if (parts[0] === 198 && parts[1] >= 18 && parts[1] <= 19) return true;
-    return false;
-  }
-  const lower = ip.toLowerCase();
-  if (lower === "::1") return true;
-  if (lower.startsWith("fc") || lower.startsWith("fd")) return true;
-  if (lower.startsWith("fe80")) return true;
-  return false;
-}
-
-/**
  * Fetch an agent card from a URI.
  */
 export async function fetchAgentCard(
   uri: string,
 ): Promise<AgentCard | null> {
   try {
-    // Validate and resolve the URI
-    const fetchUrl = validateAgentCardUri(uri);
-    if (!fetchUrl) {
-      return null;
+    // Handle IPFS URIs
+    let fetchUrl = uri;
+    if (uri.startsWith("ipfs://")) {
+      fetchUrl = `https://ipfs.io/ipfs/${uri.slice(7)}`;
     }
 
     const response = await fetch(fetchUrl, {
