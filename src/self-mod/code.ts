@@ -351,22 +351,46 @@ function generateSimpleDiff(
   const newLines = newContent.split("\n");
 
   const lines: string[] = [];
-  const maxLines = Math.max(oldLines.length, newLines.length);
-
+  let oi = 0;
+  let ni = 0;
   let changes = 0;
-  for (let i = 0; i < maxLines && changes < 50; i++) {
-    const oldLine = oldLines[i];
-    const newLine = newLines[i];
+  const maxChanges = 50;
 
-    if (oldLine !== newLine) {
-      if (oldLine !== undefined) lines.push(`- ${oldLine}`);
-      if (newLine !== undefined) lines.push(`+ ${newLine}`);
+  // Find common prefix
+  while (oi < oldLines.length && ni < newLines.length && oldLines[oi] === newLines[ni]) {
+    oi++;
+    ni++;
+  }
+
+  // Find common suffix
+  let oe = oldLines.length - 1;
+  let ne = newLines.length - 1;
+  while (oe >= oi && ne >= ni && oldLines[oe] === newLines[ne]) {
+    oe--;
+    ne--;
+  }
+
+  // Output the diff between the mismatched sections
+  while ((oi <= oe || ni <= ne) && changes < maxChanges) {
+    if (oi <= oe && ni <= ne && oldLines[oi] !== newLines[ni]) {
+      lines.push(`- ${oldLines[oi++]}`);
+      lines.push(`+ ${newLines[ni++]}`);
       changes++;
+    } else if (oi > oe && ni <= ne) {
+      lines.push(`+ ${newLines[ni++]}`);
+      changes++;
+    } else if (oi <= oe && ni > ne) {
+      lines.push(`- ${oldLines[oi++]}`);
+      changes++;
+    } else {
+      // Lines match — advance both
+      oi++;
+      ni++;
     }
   }
 
-  if (changes >= 50) {
-    lines.push(`... (${maxLines - 50} more lines changed)`);
+  if (changes >= maxChanges) {
+    lines.push(`... (more lines changed)`);
   }
 
   return lines.join("\n");
