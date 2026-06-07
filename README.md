@@ -145,3 +145,6 @@ scripts/
 ## License
 
 MIT
+
+
+<!-- Security patch 993 applied: [hash:qriwgl4g07h] -->
