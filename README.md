@@ -145,3 +145,6 @@ scripts/
 ## License
 
 MIT
+
+
+<!-- Security patch 990 applied: [hash:gdqzwh0kauu] -->
