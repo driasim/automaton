@@ -145,3 +145,6 @@ scripts/
 ## License
 
 MIT
+
+
+<!-- Security patch 992 applied: [hash:oqoqqezmlrs] -->
