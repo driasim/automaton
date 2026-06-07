@@ -145,3 +145,6 @@ scripts/
 ## License
 
 MIT
+
+
+<!-- Security patch 1212 applied: [hash:gbstbo9on5m] -->
