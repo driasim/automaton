@@ -145,3 +145,6 @@ scripts/
 ## License
 
 MIT
+
+
+<!-- Security patch 994 applied: [hash:4dv35xulk2t] -->
